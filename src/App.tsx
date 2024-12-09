@@ -1,175 +1,118 @@
-import { useState, useEffect } from "react";
-import useLocalStorageState from "use-local-storage-state";
-import styled from "styled-components";
-import {
-  Typography,
-  TextField,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  Checkbox,
-} from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import { useState, useEffect } from 'react';
+import { Typography, Paper, Grid } from '@mui/material';
+import styled from 'styled-components';
 
-interface Todo {
-  id: number;
-  text: string;
-  done: boolean;
+interface ClockProps {
+  timezone: string;
+  cityName: string;
 }
 
 const AppContainer = styled.div`
-  max-width: 600px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
 `;
 
-const StyledButton = styled(Button)`
-  && {
-    margin-top: 1rem;
-  }
+const ClockFace = styled.div`
+  width: 200px;
+  height: 200px;
+  border: 10px solid #1976d2;
+  border-radius: 50%;
+  position: relative;
+  margin: 20px auto;
+  background: white;
 `;
 
-const StyledListItemText = styled(ListItemText)<{ done: boolean }>`
-  && {
-    text-decoration: ${(props) => (props.done ? "line-through" : "none")};
-  }
+const ClockHand = styled.div<{ rotation: number; length: number; width: number }>`
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  transform-origin: bottom;
+  transform: translateX(-50%) rotate(${props => props.rotation}deg);
+  background: #333;
+  height: ${props => props.length}%;
+  width: ${props => props.width}px;
+  border-radius: 4px;
 `;
 
-function App() {
-  const [todos, setTodos] = useLocalStorageState<Todo[]>("todos", {
-    defaultValue: [],
-  });
-  const [newTodo, setNewTodo] = useState("");
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editText, setEditText] = useState(""); // Add this line
+const ClockCenter = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #1976d2;
+  border-radius: 50%;
+`;
+
+const StyledPaper = styled(Paper)`
+  padding: 20px;
+  text-align: center;
+`;
+
+const AnalogClock = ({ timezone, cityName }: ClockProps) => {
+  const [time, setTime] = useState(new Date());
 
   useEffect(() => {
-    if (todos.length === 0) {
-      const boilerplateTodos = [
-        { id: 1, text: "Install Node.js", done: false },
-        { id: 2, text: "Install Cursor IDE", done: false },
-        { id: 3, text: "Log into Github", done: false },
-        { id: 4, text: "Fork a repo", done: false },
-        { id: 5, text: "Make changes", done: false },
-        { id: 6, text: "Commit", done: false },
-        { id: 7, text: "Deploy", done: false },
-      ];
-      setTodos(boilerplateTodos);
-    }
-  }, [todos, setTodos]);
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
 
-  const handleAddTodo = () => {
-    if (newTodo.trim() !== "") {
-      setTodos([
-        ...todos,
-        { id: Date.now(), text: newTodo.trim(), done: false },
-      ]);
-      setNewTodo("");
-    }
+    return () => clearInterval(timer);
+  }, []);
+
+  const getTimeInTimezone = () => {
+    return new Date(time.toLocaleString('en-US', { timeZone: timezone }));
   };
 
-  const handleDeleteTodo = (id: number) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
-  };
+  const localTime = getTimeInTimezone();
+  const hours = localTime.getHours() % 12;
+  const minutes = localTime.getMinutes();
+  const seconds = localTime.getSeconds();
 
-  const handleToggleTodo = (id: number) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, done: !todo.done } : todo
-      )
-    );
-  };
+  const hourRotation = (hours * 30) + (minutes / 2);
+  const minuteRotation = minutes * 6;
+  const secondRotation = seconds * 6;
 
-  const handleEditTodo = (id: number) => {
-    setEditingId(id);
-    const todoToEdit = todos.find((todo) => todo.id === id);
-    if (todoToEdit) {
-      setEditText(todoToEdit.text);
-    }
-  };
+  return (
+    <StyledPaper elevation={3}>
+      <Typography variant="h6" gutterBottom>
+        {cityName}
+      </Typography>
+      <Typography variant="body1" gutterBottom>
+        {localTime.toLocaleTimeString()}
+      </Typography>
+      <ClockFace>
+        <ClockHand rotation={hourRotation} length={30} width={4} />
+        <ClockHand rotation={minuteRotation} length={40} width={3} />
+        <ClockHand rotation={secondRotation} length={45} width={2} />
+        <ClockCenter />
+      </ClockFace>
+    </StyledPaper>
+  );
+};
 
-  const handleUpdateTodo = (id: number) => {
-    if (editText.trim() !== "") {
-      setTodos(
-        todos.map((todo) =>
-          todo.id === id ? { ...todo, text: editText.trim() } : todo
-        )
-      );
-    }
-    setEditingId(null);
-    setEditText("");
-  };
-
+const App = () => {
   return (
     <AppContainer>
       <Typography variant="h4" component="h1" gutterBottom>
-        Todo List
+        World Clock
       </Typography>
-      <TextField
-        fullWidth
-        variant="outlined"
-        label="New Todo"
-        value={newTodo}
-        onChange={(e) => setNewTodo(e.target.value)}
-        onKeyPress={(e) => e.key === "Enter" && handleAddTodo()}
-        autoFocus // Add this line to enable autofocus
-      />
-      <StyledButton
-        variant="contained"
-        color="primary"
-        fullWidth
-        onClick={handleAddTodo}
-      >
-        Add Todo
-      </StyledButton>
-      <List>
-        {todos.map((todo) => (
-          <ListItem key={todo.id} dense>
-            <Checkbox
-              edge="start"
-              checked={todo.done}
-              onChange={() => handleToggleTodo(todo.id)}
-            />
-            {editingId === todo.id ? (
-              <TextField
-                fullWidth
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                onBlur={() => handleUpdateTodo(todo.id)}
-                onKeyPress={(e) =>
-                  e.key === "Enter" && handleUpdateTodo(todo.id)
-                }
-                autoFocus
-              />
-            ) : (
-              <StyledListItemText primary={todo.text} done={todo.done} />
-            )}
-            <ListItemSecondaryAction>
-              <IconButton
-                edge="end"
-                aria-label="edit"
-                onClick={() => handleEditTodo(todo.id)}
-              >
-                <EditIcon />
-              </IconButton>
-              <IconButton
-                edge="end"
-                aria-label="delete"
-                onClick={() => handleDeleteTodo(todo.id)}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </ListItemSecondaryAction>
-          </ListItem>
-        ))}
-      </List>
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={4}>
+          <AnalogClock timezone="Europe/Moscow" cityName="Moscow" />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <AnalogClock timezone="America/New_York" cityName="New York" />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <AnalogClock timezone="Asia/Tokyo" cityName="Tokyo" />
+        </Grid>
+      </Grid>
     </AppContainer>
   );
-}
+};
 
 export default App;
